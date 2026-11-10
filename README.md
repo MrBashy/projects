@@ -4,6 +4,8 @@ Public projects by MrBashy.
 
 ## [Password Generator](password-generator/)
 
+https://mrbashy.github.io/projects/password-generator/
+
 A simple password generator that runs entirely in your browser. Nothing is sent anywhere.
 
 - Choose length (4–64) and character types: uppercase, lowercase, numbers, symbols
