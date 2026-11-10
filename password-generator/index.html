@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Password Generator</title>
+  <style>
+    :root {
+      --bg: #f4f5f7; --card: #ffffff; --text: #1b1d22; --muted: #5d6370;
+      --border: #d8dbe1; --accent: #2f6fde; --accent-text: #ffffff;
+      --weak: #c0392b; --fair: #d68910; --strong: #239b56; --vstrong: #1e8449;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14161a; --card: #1d2026; --text: #e8eaee; --muted: #9aa1ad;
+        --border: #343842; --accent: #5b8ff0; --accent-text: #0d1117;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      padding: 16px; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main {
+      width: 100%; max-width: 440px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+    }
+    h1 { margin: 0 0 16px; font-size: 1.4rem; }
+    .output { display: flex; gap: 8px; }
+    #password {
+      flex: 1; min-width: 0; padding: 10px 12px; font: 1.05rem ui-monospace, Menlo, Consolas, monospace;
+      color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    }
+    button {
+      padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer;
+      border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text);
+    }
+    button.primary { width: 100%; margin-top: 20px; background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .strength { margin: 10px 0 18px; font-size: .9rem; color: var(--muted); }
+    .bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-bottom: 4px; }
+    .bar span { display: block; height: 100%; width: 0; transition: width .2s; }
+    label { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+    .length { display: flex; justify-content: space-between; font-weight: 600; }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+    .error { color: var(--weak); min-height: 1.5em; margin: 8px 0 0; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Password Generator</h1>
+
+    <div class="output">
+      <input id="password" type="text" readonly aria-label="Generated password">
+      <button id="copy" type="button">Copy</button>
+    </div>
+
+    <div class="strength" aria-live="polite">
+      <div class="bar"><span id="bar"></span></div>
+      <span id="strength-text"></span>
+    </div>
+
+    <div class="length"><span>Length</span><span id="length-value">16</span></div>
+    <input id="length" type="range" min="4" max="64" value="16" aria-label="Password length">
+
+    <label><input id="upper" type="checkbox" checked> Uppercase (A–Z)</label>
+    <label><input id="lower" type="checkbox" checked> Lowercase (a–z)</label>
+    <label><input id="digits" type="checkbox" checked> Numbers (0–9)</label>
+    <label><input id="symbols" type="checkbox" checked> Symbols (!@#$…)</label>
+    <label><input id="avoidLookalikes" type="checkbox"> Avoid look-alikes (I, l, 1, O, 0, o)</label>
+
+    <p id="error" class="error" role="alert"></p>
+    <button id="generate" class="primary" type="button">Generate new password</button>
+  </main>
+
+  <script src="generator.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const colors = { "Weak": "--weak", "Fair": "--fair", "Strong": "--strong", "Very strong": "--vstrong" };
+
+    function readOptions() {
+      return {
+        length: Number($("length").value),
+        upper: $("upper").checked,
+        lower: $("lower").checked,
+        digits: $("digits").checked,
+        symbols: $("symbols").checked,
+        avoidLookalikes: $("avoidLookalikes").checked,
+      };
+    }
+
+    function update() {
+      const opts = readOptions();
+      $("length-value").textContent = opts.length;
+      try {
+        $("password").value = PasswordGenerator.generatePassword(opts);
+        $("error").textContent = "";
+        const { bits, label } = PasswordGenerator.estimateStrength(opts);
+        $("bar").style.width = Math.min(100, (bits / 128) * 100) + "%";
+        $("bar").style.background = `var(${colors[label]})`;
+        $("strength-text").textContent = `${label} · about ${bits} bits of entropy`;
+      } catch (err) {
+        $("password").value = "";
+        $("error").textContent = err.message;
+        $("bar").style.width = "0";
+        $("strength-text").textContent = "";
+      }
+    }
+
+    $("copy").addEventListener("click", async () => {
+      const value = $("password").value;
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch {
+        $("password").select();
+        document.execCommand("copy");
+      }
+      $("copy").textContent = "Copied!";
+      setTimeout(() => ($("copy").textContent = "Copy"), 1500);
+    });
+
+    $("generate").addEventListener("click", update);
+    document.querySelectorAll("input").forEach((el) => el.addEventListener("input", update));
+    update();
+  </script>
+</body>
+</html>
